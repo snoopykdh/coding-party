@@ -468,7 +468,9 @@ function insertText(t) {
 document.addEventListener("keydown", (e) => {
   if ((e.shiftKey || e.ctrlKey) && e.key === "Enter" && !$("studentView").classList.contains("hidden")) { e.preventDefault(); runCode(); }
 });
-const draftKey = () => `cp.draft.${current.lang}.${current.no}`;
+// 임시 저장 키에 시작코드 지문을 넣는다 → 선생님이 시작코드(난이도)를 바꾸면 예전 임시 저장 코드 대신 새 시작코드가 뜬다
+const hashStr = (s) => { let h = 0; for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0; return (h >>> 0).toString(36); };
+const draftKey = () => `cp.draft.${current.lang}.${current.no}.${hashStr(current.code || "")}`;
 
 /* ══════════ 문제 목록 ══════════ */
 function renderList() {
