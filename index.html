@@ -216,7 +216,8 @@ const ready = loadPyodide({ indexURL: "https://cdn.jsdelivr.net/pyodide/v0.26.4/
   .catch(e => postMessage({ type: "fatal", error: String(e) }));
 
 const RUNNER = `
-import sys
+import sys, os, tempfile
+os.chdir(tempfile.mkdtemp())   # 실행마다 빈 폴더에서 시작 (파일입출력 예제가 이전 실행 파일에 영향받지 않게)
 _lines = _inp.split("\\n")
 if _lines and _lines[-1] == "":
     _lines.pop()
