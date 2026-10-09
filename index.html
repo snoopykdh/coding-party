@@ -1,0 +1,750 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>동환쌤의 즐거운 코딩파티</title>
+<style>
+  :root {
+    --main: #2f5bea; --main-d: #1f43b8; --accent: #12b886; --warn: #f08c00; --bad: #e03131;
+    --bg: #f4f6fb; --card: #fff; --line: #e3e7ef; --text: #1f2937; --muted: #6b7280;
+    --code-bg: #1e1f29; --code-fg: #e6e6e6; --gutter: #6c7086;
+    --radius: 12px;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body { font-family: "Pretendard", "Malgun Gothic", "Apple SD Gothic Neo", system-ui, sans-serif;
+         background: var(--bg); color: var(--text); font-size: 15px; -webkit-text-size-adjust: 100%; }
+  button { font: inherit; cursor: pointer; border: 0; border-radius: 8px; }
+  input, textarea, select { font: inherit; }
+  .hidden { display: none !important; }
+
+  /* ── 상단 바 ── */
+  header { position: sticky; top: 0; z-index: 20; display: flex; align-items: center; gap: 10px;
+           padding: 10px 16px; background: var(--main); color: #fff; box-shadow: 0 2px 8px rgba(0,0,0,.12); }
+  header h1 { font-size: 18px; margin: 0; flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .menu-btn { display: none; background: rgba(255,255,255,.18); color: #fff; padding: 6px 10px; font-size: 18px; }
+  .lang-toggle { display: flex; background: rgba(255,255,255,.18); border-radius: 999px; padding: 3px; }
+  .lang-toggle button { background: transparent; color: #fff; padding: 5px 12px; border-radius: 999px; font-weight: 700; font-size: 14px; }
+  .lang-toggle button.on { background: #fff; color: var(--main); }
+  .me { background: rgba(255,255,255,.18); color: #fff; padding: 6px 12px; font-size: 14px; white-space: nowrap; }
+
+  /* ── 레이아웃 ── */
+  .layout { display: flex; min-height: calc(100vh - 56px); }
+  aside { width: 260px; flex-shrink: 0; background: var(--card); border-right: 1px solid var(--line); overflow-y: auto;
+          position: sticky; top: 56px; height: calc(100vh - 56px); }
+  .list-head { padding: 14px 16px 8px; font-size: 13px; color: var(--muted); font-weight: 700; }
+  .item { display: flex; align-items: center; gap: 8px; padding: 12px 16px; border-left: 4px solid transparent;
+          cursor: pointer; font-size: 14px; line-height: 1.35; }
+  .item:hover { background: #f1f4ff; }
+  .item.on { background: #e8eeff; border-left-color: var(--main); font-weight: 700; color: var(--main-d); }
+  .item .badge { margin-left: auto; font-size: 13px; }
+  .notice { margin: 10px 12px; padding: 10px 12px; background: #fff8e6; border-radius: 8px; font-size: 13px; line-height: 1.5; white-space: pre-wrap; }
+
+  main { flex: 1; min-width: 0; padding: 16px; max-width: 1100px; }
+  .card { background: var(--card); border-radius: var(--radius); box-shadow: 0 1px 3px rgba(0,0,0,.06); padding: 16px; margin-bottom: 14px; }
+  .p-title { margin: 0 0 8px; font-size: 19px; color: var(--main-d); }
+  .p-desc { white-space: pre-wrap; line-height: 1.65; }
+  .p-tools { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+  .chip { background: #eef1f7; color: var(--text); padding: 6px 12px; font-size: 13px; }
+  .hint { margin-top: 10px; padding: 10px 12px; background: #fff8e6; border-radius: 8px; white-space: pre-wrap; line-height: 1.6; }
+
+  /* ── 에디터 ── */
+  .work { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); gap: 14px; }
+  .label { font-size: 13px; font-weight: 700; color: var(--muted); margin: 0 0 6px; display: flex; justify-content: space-between; align-items: center; }
+  .editor { display: flex; background: var(--code-bg); border-radius: var(--radius); overflow: hidden; height: 360px; }
+  .gutter { padding: 12px 6px 12px 10px; color: var(--gutter); text-align: right; user-select: none; overflow: hidden;
+            font: 15px/1.55 Consolas, "D2Coding", Menlo, monospace; min-width: 38px; }
+  .gutter div.err { color: #fff; background: var(--bad); border-radius: 4px; padding: 0 3px; }
+  #code { flex: 1; border: 0; outline: 0; resize: none; background: transparent; color: var(--code-fg); padding: 12px;
+          font: 15px/1.55 Consolas, "D2Coding", Menlo, monospace; white-space: pre; overflow: auto; tab-size: 4; }
+  #stdin { width: 100%; height: 80px; border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; resize: vertical;
+           font: 14px/1.5 Consolas, "D2Coding", monospace; background: #fbfcfe; }
+  .actions { display: flex; gap: 8px; margin: 12px 0; flex-wrap: wrap; }
+  .actions button { padding: 11px 18px; font-weight: 700; font-size: 15px; }
+  .run { background: var(--main); color: #fff; } .run:hover { background: var(--main-d); }
+  .grade { background: var(--accent); color: #fff; }
+  .submit { background: #7048e8; color: #fff; }
+  .actions button:disabled { opacity: .5; cursor: wait; }
+  .status { align-self: center; font-size: 13px; color: var(--muted); }
+
+  .out { background: #0f1117; color: #d7f5e7; border-radius: var(--radius); padding: 12px; min-height: 140px; max-height: 360px; overflow: auto;
+         font: 14px/1.5 Consolas, "D2Coding", monospace; white-space: pre-wrap; word-break: break-all; }
+  .out .e { color: #ff8787; } .out .sys { color: #8b93a7; }
+  .friendly { margin-top: 10px; padding: 10px 12px; border-radius: 8px; background: #fff0f0; color: #a51d1d; line-height: 1.55; white-space: pre-wrap; }
+
+  .tests { margin-top: 12px; }
+  .score { display: flex; align-items: center; gap: 10px; font-weight: 700; margin-bottom: 8px; }
+  .bar { flex: 1; height: 10px; background: #e9ecef; border-radius: 99px; overflow: hidden; }
+  .bar > i { display: block; height: 100%; background: var(--accent); transition: width .3s; }
+  .tc { border: 1px solid var(--line); border-radius: 8px; margin-bottom: 8px; overflow: hidden; }
+  .tc summary { padding: 9px 12px; cursor: pointer; font-weight: 700; list-style: none; }
+  .tc.ok summary { background: #e6fcf5; color: #087f5b; } .tc.no summary { background: #fff5f5; color: #c92a2a; }
+  .tc .cmp { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 8px; padding: 10px; }
+  .tc pre { margin: 4px 0 0; background: #f8f9fb; padding: 8px; border-radius: 6px; font: 13px/1.45 Consolas, monospace;
+            white-space: pre-wrap; word-break: break-all; max-height: 160px; overflow: auto; }
+  .tc .cap { font-size: 12px; color: var(--muted); font-weight: 700; }
+
+  /* ── 대화상자 ── */
+  .modal { position: fixed; inset: 0; background: rgba(15,20,35,.5); display: flex; align-items: center; justify-content: center; z-index: 50; padding: 16px; }
+  .modal .box { background: #fff; border-radius: 14px; padding: 20px; width: 100%; max-width: 380px; max-height: 90vh; overflow: auto; }
+  .modal.wide .box { max-width: 900px; }
+  .modal h2 { margin: 0 0 12px; font-size: 18px; }
+  .field { width: 100%; padding: 11px 12px; border: 1px solid var(--line); border-radius: 8px; margin-bottom: 10px; font-size: 16px; }
+  .row { display: flex; gap: 8px; justify-content: flex-end; }
+  .btn { padding: 10px 16px; font-weight: 700; background: var(--main); color: #fff; }
+  .btn.ghost { background: #eef1f7; color: var(--text); }
+  .toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); background: #222; color: #fff; padding: 12px 18px;
+           border-radius: 10px; z-index: 60; font-weight: 700; box-shadow: 0 6px 20px rgba(0,0,0,.25); max-width: 90vw; text-align: center; }
+
+  /* ── 교사 현황판 ── */
+  .dash-wrap { overflow: auto; max-height: calc(100vh - 200px); border: 1px solid var(--line); border-radius: 8px; }
+  table.dash { border-collapse: collapse; font-size: 13px; background: #fff; }
+  .dash th, .dash td { border: 1px solid var(--line); padding: 7px 9px; text-align: center; white-space: nowrap; }
+  .dash thead th { position: sticky; top: 0; background: #eef1f7; z-index: 2; }
+  .dash td.ok { background: #e6fcf5; cursor: pointer; } .dash td.no { background: #fff0f0; cursor: pointer; } .dash td.sub { background: #f3f0ff; cursor: pointer; }
+  .dash tr > :first-child, .dash tr > :nth-child(2) { position: sticky; background: #fff; z-index: 1; }
+  .dash tr > :first-child { left: 0; } .dash tr > :nth-child(2) { left: 72px; }
+  .dash thead tr > :first-child, .dash thead tr > :nth-child(2) { z-index: 3; background: #eef1f7; }
+  .dash td:first-child { min-width: 72px; }
+  .sub-item { border: 1px solid var(--line); border-radius: 8px; padding: 10px; margin-bottom: 10px; }
+  .sub-item pre { background: #f8f9fb; padding: 8px; border-radius: 6px; white-space: pre-wrap; word-break: break-all; font: 13px/1.45 Consolas, monospace; max-height: 260px; overflow: auto; }
+
+  /* ── 태블릿·스마트폰 ── */
+  @media (max-width: 900px) {
+    .work { grid-template-columns: 1fr; }
+    .editor { height: 300px; }
+  }
+  @media (max-width: 720px) {
+    .menu-btn { display: block; }
+    aside { position: fixed; left: 0; top: 0; bottom: 0; height: 100%; z-index: 40; transform: translateX(-100%); transition: transform .2s;
+            box-shadow: 4px 0 20px rgba(0,0,0,.2); width: 80vw; max-width: 300px; }
+    aside.open { transform: none; }
+    main { padding: 12px; }
+    header { flex-wrap: wrap; row-gap: 8px; padding: 8px 12px; }
+    header h1 { font-size: 17px; flex: 1 1 calc(100% - 60px); }
+    .lang-toggle { order: 2; }
+    .me { order: 3; margin-left: auto; }
+    .me { padding: 6px 8px; font-size: 13px; }
+    .lang-toggle button { padding: 5px 9px; }
+    .actions button { flex: 1; padding: 12px 8px; }
+    .tc .cmp { grid-template-columns: 1fr; }
+    #code, .gutter { font-size: 14px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <button class="menu-btn" id="menuBtn" aria-label="문제 목록">☰</button>
+  <h1 id="siteTitle">동환쌤의 즐거운 코딩파티</h1>
+  <div class="lang-toggle" id="langToggle">
+    <button data-lang="python" class="on">Python</button>
+    <button data-lang="c">C</button>
+  </div>
+  <button class="me" id="meBtn">👤 로그인</button>
+</header>
+
+<div class="layout" id="studentView">
+  <aside id="side">
+    <div id="noticeBox" class="notice hidden"></div>
+    <div class="list-head" id="listHead">문제 목록</div>
+    <div id="list"></div>
+    <div class="list-head" style="margin-top:20px"><a href="#teacher" style="color:var(--muted)">🔒 교사용 현황판</a></div>
+  </aside>
+
+  <main>
+    <section class="card">
+      <h2 class="p-title" id="pTitle">불러오는 중…</h2>
+      <div class="p-desc" id="pDesc"></div>
+      <div class="p-tools">
+        <button class="chip" id="hintBtn">💡 힌트</button>
+        <button class="chip" id="resetBtn">↺ 처음 코드로</button>
+        <button class="chip" id="exampleBtn">📥 예시 입력 넣기</button>
+      </div>
+      <div class="hint hidden" id="hintBox"></div>
+    </section>
+
+    <div class="work">
+      <div>
+        <p class="label"><span id="editorLabel">💻 코드</span><span style="font-weight:400">Shift+Enter 실행</span></p>
+        <div class="editor"><div class="gutter" id="gutter"></div>
+          <textarea id="code" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off"></textarea></div>
+      </div>
+      <div>
+        <p class="label">⌨️ 입력값 <span style="font-weight:400">input()/scanf 에 들어갈 값, 한 줄에 하나</span></p>
+        <textarea id="stdin" spellcheck="false" placeholder="입력이 필요한 문제면 여기에 값을 넣으세요"></textarea>
+        <p class="label" style="margin-top:12px">📺 실행 결과</p>
+        <div class="out" id="out"><span class="sys">엔진 준비 중…</span></div>
+      </div>
+    </div>
+
+    <div class="actions">
+      <button class="run" id="runBtn">▶ 실행</button>
+      <button class="grade" id="gradeBtn">✔ 채점</button>
+      <button class="submit" id="submitBtn">📤 제출</button>
+      <span class="status" id="status"></span>
+    </div>
+    <div id="friendly" class="friendly hidden"></div>
+    <div id="tests" class="tests"></div>
+  </main>
+</div>
+
+<!-- 교사 현황판 -->
+<div id="teacherView" class="hidden" style="padding:16px">
+  <div class="card">
+    <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom:12px">
+      <h2 class="p-title" style="margin:0; flex:1">📊 제출 현황</h2>
+      <span class="status" id="dashStatus"></span>
+      <button class="btn ghost" id="dashRefresh">새로고침</button>
+      <a class="btn ghost" href="#" style="text-decoration:none">← 학생 화면</a>
+    </div>
+    <p style="margin:0 0 10px; font-size:13px; color:var(--muted)">칸을 누르면 그 학생이 낸 코드와 실행 결과를 볼 수 있어요. 30초마다 자동으로 새로고침됩니다.</p>
+    <div class="dash-wrap" id="dash"></div>
+  </div>
+</div>
+
+<div id="modal" class="modal hidden"><div class="box" id="modalBox"></div></div>
+<div id="toast" class="toast hidden"></div>
+
+<!-- ───────── 파이썬 실행 워커 ───────── -->
+<script type="text/js-worker" id="pyWorkerSrc">
+importScripts("https://cdn.jsdelivr.net/pyodide/v0.26.4/full/pyodide.js");
+let py;
+const ready = loadPyodide({ indexURL: "https://cdn.jsdelivr.net/pyodide/v0.26.4/full/" })
+  .then(p => { py = p; postMessage({ type: "ready" }); })
+  .catch(e => postMessage({ type: "fatal", error: String(e) }));
+
+const RUNNER = `
+import sys
+_lines = _inp.split("\\n")
+if _lines and _lines[-1] == "":
+    _lines.pop()
+def _input(prompt=""):
+    if _echo:
+        sys.stdout.write(str(prompt))
+    if not _lines:
+        raise EOFError("입력값이 부족합니다")
+    v = _lines.pop(0)
+    if _echo:
+        sys.stdout.write(v + "\\n")
+    return v
+_ns = {"__name__": "__main__", "input": _input}
+try:
+    exec(compile(_src, "<내 코드>", "exec"), _ns)
+finally:
+    sys.stdout.flush()
+`;
+
+onmessage = async (ev) => {
+  const { id, code, input, echo } = ev.data;
+  await ready;
+  let out = "";
+  const dec = new TextDecoder();
+  const sink = { write: (buf) => { out += dec.decode(buf, { stream: true }); return buf.length; } };
+  py.setStdout(sink); py.setStderr(sink);
+  try {
+    await py.loadPackagesFromImports(code);
+    py.globals.set("_src", code); py.globals.set("_inp", input || ""); py.globals.set("_echo", !!echo);
+    await py.runPythonAsync(RUNNER);
+    postMessage({ type: "done", id, ok: true, out });
+  } catch (e) {
+    postMessage({ type: "done", id, ok: false, out, error: String(e.message || e) });
+  }
+};
+</script>
+
+<!-- ───────── C 실행 워커 (JSCPP 인터프리터) ───────── -->
+<script type="text/js-worker" id="cWorkerSrc">
+const CDN = "https://cdn.jsdelivr.net";
+let JSCPP;
+// JSCPP 2.0.9 의 scanf("%s") 정규식이 글자를 두 개씩 묶어 읽어서 홀수 길이 한글 단어의 끝 글자가 빠진다 → \S+ 로 바꿔 불러온다
+try {
+  let src = await (await fetch(CDN + "/npm/JSCPP@2.0.9/+esm")).text();
+  src = src.split(String.raw`([\\w\\]=-]|\\S[^\\][^\\ ])+(\\\\[\\w\\ ][\\w\\:]*)*`).join(String.raw`\\S+`)
+           .replace(/from"\/npm\//g, 'from"' + CDN + "/npm/");
+  JSCPP = (await import(URL.createObjectURL(new Blob([src], { type: "text/javascript" })))).default;
+} catch (e) {
+  JSCPP = (await import(CDN + "/npm/JSCPP@2.0.9/+esm")).default;
+}
+// JSCPP 전처리기는 함수 인자 속 문자열의 '쉼표 뒤 공백'을 지운다 (printf("a, b") → "a,b") → 그 공백을   으로 바꿔 둔다
+function protectStrings(src) {
+  return src.replace(/\/\/[^\n]*|\/\*[\s\S]*?\*\/|'(?:[^'\\\n]|\\.)*'|"(?:[^"\\\n]|\\.)*"/g, tok =>
+    tok[0] !== '"' ? tok : tok.replace(/,([ \t]+)/g, (m, ws) => "," + ws.replace(/ /g, "\\u0020").replace(/\t/g, "\\t")));
+}
+postMessage({ type: "ready" });
+onmessage = (ev) => {
+  const { id, code, input, timeout } = ev.data;
+  let out = "";
+  try {
+    const exit = JSCPP.run(protectStrings(code), input || "", {
+      stdio: { write: s => { out += s; } },
+      maxTimeout: timeout,
+      // 한글 문자열을 쓰려고 char 범위를 넓힘 (한 글자 = char 하나)
+      limits: { char: { max: 0x10FFFF, min: -0x10FFFF, bytes: 1 } }
+    });
+    postMessage({ type: "done", id, ok: true, out, exit });
+  } catch (e) {
+    postMessage({ type: "done", id, ok: false, out, error: String(e.message || e) });
+  }
+};
+</script>
+
+<script>
+/* ══════════════════════════════════════════════════════════
+   설정 — 선생님이 바꿀 곳은 여기 한 줄뿐입니다.
+   구글 앱스 스크립트를 '배포'하고 받은 웹앱 URL을 붙여 넣으세요.
+   (사이트 제목·공지·문제는 스프레드시트에서 바꿉니다)
+   ══════════════════════════════════════════════════════════ */
+const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyImA09bCeY6vjAozNDekDnZ6E6kjLqK5bjLsUfdYaoybXxumkWi98gH1YWKzUuLC7lpA/exec";
+
+const DEFAULT_TITLE = "동환쌤의 즐거운 코딩파티";
+const RUN_TIMEOUT = 5000;   // 한 번 실행에 허용하는 시간(ms) — 무한 반복 방지
+
+/* 스프레드시트에 연결되지 않았을 때 보여 줄 예시 문제 */
+const SAMPLE_LESSONS = [
+  { no: "P1", lang: "python", title: "1. 첫 출력", desc: "\"Hello, 코딩파티!\" 를 출력하세요.",
+    code: 'print("Hello, 코딩파티!")', hint: "print() 안에 문자열을 따옴표로 감싸 넣어요.",
+    tests: [{ in: "", out: "Hello, 코딩파티!" }] },
+  { no: "P2", lang: "python", title: "2. 두 수의 합", desc: "정수 두 개를 한 줄에 하나씩 입력받아 합을 출력하세요.\n\n입력 예)\n3\n5\n출력 예)\n8",
+    code: 'a = int(input("첫 번째 수: "))\nb = int(input("두 번째 수: "))\nprint(a + b)', hint: "input()은 문자열이라 int()로 바꿔야 더할 수 있어요.",
+    tests: [{ in: "3\n5", out: "8" }, { in: "-2\n10", out: "8" }, { in: "100\n250", out: "350" }] },
+  { no: "P3", lang: "python", title: "3. 짝수 홀수", desc: "정수 하나를 입력받아 짝수면 '짝수', 홀수면 '홀수'를 출력하세요.",
+    code: 'n = int(input())\n# 여기에 if 문을 작성하세요\n', hint: "n % 2 == 0 이면 짝수예요.",
+    tests: [{ in: "4", out: "짝수" }, { in: "7", out: "홀수" }, { in: "0", out: "짝수" }] },
+  { no: "C1", lang: "c", title: "1. 첫 출력", desc: "\"Hello, C!\" 를 출력하세요.",
+    code: '#include <stdio.h>\n\nint main() {\n    printf("Hello, C!\\n");\n    return 0;\n}', hint: "printf 끝의 \\n 은 줄바꿈이에요.",
+    tests: [{ in: "", out: "Hello, C!" }] },
+  { no: "C2", lang: "c", title: "2. 두 수의 합", desc: "정수 두 개를 입력받아 합을 출력하세요.\n\n입력 예)\n3 5\n출력 예)\n8",
+    code: '#include <stdio.h>\n\nint main() {\n    int a, b;\n    scanf("%d %d", &a, &b);\n    printf("%d\\n", a + b);\n    return 0;\n}', hint: "scanf 에서 변수 앞에 & 를 붙여요.",
+    tests: [{ in: "3 5", out: "8" }, { in: "-2 10", out: "8" }] },
+  { no: "C3", lang: "c", title: "3. 1부터 N까지 합", desc: "N을 입력받아 1부터 N까지의 합을 출력하세요.",
+    code: '#include <stdio.h>\n\nint main() {\n    int n, sum = 0;\n    scanf("%d", &n);\n    // for 문으로 합을 구하세요\n\n    printf("%d\\n", sum);\n    return 0;\n}', hint: "for (int i = 1; i <= n; i++) sum += i;",
+    tests: [{ in: "10", out: "55" }, { in: "1", out: "1" }, { in: "100", out: "5050" }] },
+];
+
+/* ══════════ 상태 ══════════ */
+const $ = (id) => document.getElementById(id);
+const store = {
+  get(k, d) { try { const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); } catch { return d; } },
+  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} },
+};
+let LESSONS = [];
+let lang = store.get("cp.lang", "python");
+let current = null;          // 지금 보고 있는 문제
+let me = store.get("cp.me", null);   // { id, name }
+let lastGrade = null;        // 마지막 채점 결과
+let connected = false;
+
+/* ══════════ 실행 엔진 (워커) ══════════ */
+const engines = {
+  python: { worker: null, ready: false, src: "pyWorkerSrc", module: false, waiting: [] },
+  c:      { worker: null, ready: false, src: "cWorkerSrc",  module: true,  waiting: [] },
+};
+let jobSeq = 0;
+const jobs = new Map();
+
+function startEngine(name) {
+  const eg = engines[name];
+  if (eg.worker) return;
+  const blob = new Blob([$(eg.src).textContent], { type: "text/javascript" });
+  eg.ready = false;
+  eg.worker = new Worker(URL.createObjectURL(blob), eg.module ? { type: "module" } : undefined);
+  eg.worker.onmessage = (ev) => {
+    const m = ev.data;
+    if (m.type === "ready") { eg.ready = true; eg.waiting.splice(0).forEach(f => f()); if (name === current?.lang) setStatus(""); }
+    else if (m.type === "fatal") { printSys("엔진을 불러오지 못했어요. 인터넷 연결을 확인하고 새로고침 해 주세요.\n" + m.error); }
+    else if (m.type === "done") { const j = jobs.get(m.id); if (j) { jobs.delete(m.id); clearTimeout(j.timer); j.resolve(m); } }
+  };
+  eg.worker.onerror = (e) => printSys("엔진 오류: " + (e.message || e));
+}
+function engineReady(name) {
+  startEngine(name);
+  const eg = engines[name];
+  return eg.ready ? Promise.resolve() : new Promise(r => eg.waiting.push(r));
+}
+function restartEngine(name) {
+  const eg = engines[name];
+  if (eg.worker) eg.worker.terminate();
+  eg.worker = null; eg.ready = false;
+  startEngine(name);
+}
+/* 코드 한 번 실행 → { ok, out, error, timeout } */
+async function execute(name, code, input, echo) {
+  await engineReady(name);
+  const id = ++jobSeq;
+  return new Promise((resolve) => {
+    const timer = setTimeout(() => {          // 무한 반복 등으로 멈추면 엔진을 새로 띄운다
+      jobs.delete(id); restartEngine(name);
+      resolve({ ok: false, out: "", timeout: true, error: "시간 초과" });
+    }, RUN_TIMEOUT + 1500);
+    jobs.set(id, { resolve, timer });
+    engines[name].worker.postMessage({ id, code, input, echo, timeout: RUN_TIMEOUT });
+  });
+}
+
+/* ══════════ 오류를 학생 말로 풀기 ══════════ */
+const PY_HINTS = {
+  SyntaxError: "문법 오류예요. 괄호·따옴표가 짝이 맞는지, if/for/def 줄 끝에 콜론(:)이 있는지 확인하세요.",
+  IndentationError: "들여쓰기 오류예요. if/for/def 아래 줄은 같은 칸(스페이스 4칸)만큼 들여써야 해요.",
+  TabError: "탭과 스페이스가 섞였어요. 들여쓰기를 스페이스 4칸으로 통일하세요.",
+  NameError: "정의되지 않은 이름을 썼어요. 변수 이름 철자, 대소문자, 변수를 만들기 전에 쓴 건 아닌지 확인하세요.",
+  TypeError: "자료형이 맞지 않아요. 예) 문자열 + 숫자 → int()나 str()로 바꿔 주세요.",
+  ValueError: "값이 알맞지 않아요. 예) int(\"abc\") 처럼 숫자가 아닌 걸 숫자로 바꾸려 했는지 확인하세요.",
+  ZeroDivisionError: "0으로 나누었어요. 나누는 수가 0이 되지 않게 해 주세요.",
+  IndexError: "리스트 범위를 벗어났어요. 인덱스는 0부터 (길이-1)까지예요.",
+  KeyError: "딕셔너리에 없는 키를 찾았어요. 키 이름을 확인하세요.",
+  AttributeError: "그 자료형에는 없는 기능(메서드)을 썼어요. 철자를 확인하세요.",
+  EOFError: "input()이 입력값을 더 기다리고 있어요. 오른쪽 '입력값' 칸에 값을 한 줄에 하나씩 넣어 주세요.",
+  RecursionError: "함수가 자기 자신을 끝없이 부르고 있어요. 멈추는 조건을 확인하세요.",
+  ModuleNotFoundError: "그 모듈은 여기서 쓸 수 없어요.",
+};
+function explainPython(err) {
+  const lines = err.trim().split("\n");
+  let lineNo = null;
+  for (const l of lines) { const m = l.match(/File "<내 코드>", line (\d+)/); if (m) lineNo = +m[1]; }
+  const last = lines[lines.length - 1] || "";
+  const type = (last.match(/^(\w+(?:Error|Exception)?)\b/) || [])[1] || "";
+  const hint = PY_HINTS[type] || "";
+  // 내부 실행기 줄은 빼고 학생 코드 부분만 보여 준다
+  const start = lines.findIndex(l => l.includes('File "<내 코드>"'));
+  const shown = start >= 0 ? lines.slice(start).join("\n") : last;
+  return { lineNo, raw: shown, friendly: `${lineNo ? lineNo + "번째 줄: " : ""}${last}\n${hint ? "👉 " + hint : ""}` };
+}
+function explainC(err) {
+  let lineNo = null, hint = "";
+  let m = err.match(/line (\d+)/) || err.match(/^(\d+):(\d+)/m);
+  if (m) lineNo = +m[1];
+  if (/Parsing Failure/.test(err)) {
+    hint = /";"/.test(err) ? "문장 끝에 세미콜론(;)이 빠졌을 수 있어요." : "문법 오류예요. 세미콜론(;), 괄호 ( ) { } 짝, 따옴표를 확인하세요.";
+  } else if (/Time limit/i.test(err)) hint = "실행 시간이 너무 길어요. 반복문이 끝나는지 확인하세요.";
+  else if (/is not defined|not declared|undefined/i.test(err)) hint = "선언하지 않은 변수나 함수를 썼어요. 철자와 선언 위치를 확인하세요.";
+  else if (/struct/i.test(err)) hint = "이 사이트의 C 엔진은 구조체(struct)를 지원하지 않아요.";
+  else if (/include/i.test(err)) hint = "지원하지 않는 헤더예요. stdio.h, stdlib.h, string.h, math.h, ctype.h, time.h 를 쓸 수 있어요.";
+  else if (/divide|division/i.test(err)) hint = "0으로 나누었어요.";
+  else if (/index|bound/i.test(err)) hint = "배열 범위를 벗어났어요.";
+  return { lineNo, raw: err, friendly: `${lineNo ? lineNo + "번째 줄 근처: " : ""}${err.split("\n")[0]}\n${hint ? "👉 " + hint : ""}` };
+}
+
+/* ══════════ 화면: 출력 ══════════ */
+const outEl = $("out");
+function clearOut() { outEl.textContent = ""; $("friendly").classList.add("hidden"); markErrLine(null); }
+function printOut(t, cls) { const s = document.createElement("span"); if (cls) s.className = cls; s.textContent = t; outEl.appendChild(s); outEl.scrollTop = outEl.scrollHeight; }
+function printSys(t) { printOut(t + "\n", "sys"); }
+function setStatus(t) { $("status").textContent = t; }
+function toast(t, ms = 2200) { const el = $("toast"); el.textContent = t; el.classList.remove("hidden"); clearTimeout(toast.t); toast.t = setTimeout(() => el.classList.add("hidden"), ms); }
+function showFriendly(info) { const f = $("friendly"); f.textContent = info.friendly; f.classList.remove("hidden"); markErrLine(info.lineNo); }
+function busy(on) { ["runBtn", "gradeBtn", "submitBtn"].forEach(id => $(id).disabled = on); }
+
+/* ══════════ 에디터 (줄 번호·자동 들여쓰기·임시 저장) ══════════ */
+const codeEl = $("code"), gutter = $("gutter");
+let errLine = null;
+function renderGutter() {
+  const n = codeEl.value.split("\n").length;
+  let h = "";
+  for (let i = 1; i <= n; i++) h += `<div${i === errLine ? ' class="err"' : ""}>${i}</div>`;
+  gutter.innerHTML = h; gutter.scrollTop = codeEl.scrollTop;
+}
+function markErrLine(n) { errLine = n; renderGutter(); }
+codeEl.addEventListener("scroll", () => gutter.scrollTop = codeEl.scrollTop);
+codeEl.addEventListener("input", () => { renderGutter(); if (current) store.set(draftKey(), codeEl.value); });
+codeEl.addEventListener("keydown", (e) => {
+  if (e.key === "Tab") {
+    e.preventDefault(); insertText("    ");
+  } else if (e.key === "Enter" && !e.shiftKey && !e.ctrlKey && !e.isComposing) {
+    const before = codeEl.value.slice(0, codeEl.selectionStart);
+    const line = before.slice(before.lastIndexOf("\n") + 1);
+    let indent = line.match(/^\s*/)[0];
+    if (/[:{]\s*$/.test(line)) indent += "    ";
+    e.preventDefault(); insertText("\n" + indent);
+  }
+});
+function insertText(t) {
+  const s = codeEl.selectionStart, en = codeEl.selectionEnd;
+  codeEl.setRangeText(t, s, en, "end");
+  codeEl.dispatchEvent(new Event("input"));
+}
+document.addEventListener("keydown", (e) => {
+  if ((e.shiftKey || e.ctrlKey) && e.key === "Enter" && !$("studentView").classList.contains("hidden")) { e.preventDefault(); runCode(); }
+});
+const draftKey = () => `cp.draft.${current.lang}.${current.no}`;
+
+/* ══════════ 문제 목록 ══════════ */
+function renderList() {
+  const items = LESSONS.filter(l => l.lang === lang);
+  const passed = store.get("cp.passed", {});
+  $("listHead").textContent = `${lang === "c" ? "C언어" : "파이썬"} 문제 ${items.length}개`;
+  const list = $("list"); list.innerHTML = "";
+  const free = { no: "FREE-" + lang, lang, title: "✏️ 자유 연습장", desc: "무엇이든 자유롭게 코딩해 보세요. (채점·제출 없음)", code: lang === "c" ? '#include <stdio.h>\n\nint main() {\n    \n    return 0;\n}' : "", hint: "", tests: [], free: true };
+  [free, ...items].forEach(l => {
+    const d = document.createElement("div");
+    d.className = "item" + (current && current.no === l.no && current.lang === l.lang ? " on" : "");
+    d.innerHTML = `<span></span><span class="badge">${passed[l.lang + "." + l.no] ? "✅" : ""}</span>`;
+    d.firstChild.textContent = l.title;
+    d.onclick = () => { openLesson(l); $("side").classList.remove("open"); };
+    list.appendChild(d);
+  });
+  if (!current || current.lang !== lang) openLesson(items[0] || free);
+}
+function openLesson(l) {
+  current = l; lastGrade = null;
+  $("pTitle").textContent = l.title;
+  $("pDesc").textContent = l.desc || "";
+  $("hintBox").classList.add("hidden"); $("hintBox").textContent = l.hint || "";
+  $("hintBtn").classList.toggle("hidden", !l.hint);
+  $("exampleBtn").classList.toggle("hidden", !(l.tests[0] && l.tests[0].in));
+  $("gradeBtn").classList.toggle("hidden", !l.tests.length);
+  $("submitBtn").classList.toggle("hidden", !!l.free);
+  $("editorLabel").textContent = l.lang === "c" ? "💻 C 코드" : "💻 파이썬 코드";
+  codeEl.value = store.get(draftKey(), l.code || "");
+  $("stdin").value = l.tests[0] ? l.tests[0].in : "";
+  $("tests").innerHTML = ""; clearOut();
+  if (!engines[l.lang].ready) { printSys(l.lang === "c" ? "C 엔진 준비 중…" : "파이썬 엔진 준비 중… (처음 한 번은 10초쯤 걸려요)"); engineReady(l.lang).then(() => { if (current === l) { clearOut(); printSys("✅ 준비 완료! ▶ 실행을 눌러 보세요."); } }); }
+  else printSys("▶ 실행을 눌러 보세요.");
+  renderGutter();
+  document.querySelectorAll(".item").forEach(el => el.classList.toggle("on", el.firstChild.textContent === l.title));
+  store.set("cp.last." + l.lang, l.no);
+  window.scrollTo({ top: 0 });
+}
+function setLang(l) {
+  lang = l; store.set("cp.lang", l);
+  document.querySelectorAll("#langToggle button").forEach(b => b.classList.toggle("on", b.dataset.lang === l));
+  const lastNo = store.get("cp.last." + l, null);
+  current = LESSONS.find(x => x.lang === l && x.no === lastNo) || null;
+  renderList();
+  if (current) openLesson(current);
+}
+
+/* ══════════ 실행 · 채점 · 제출 ══════════ */
+const norm = (s) => String(s ?? "").replace(/\r\n?/g, "\n").split("\n").map(x => x.replace(/\s+$/, "")).join("\n").replace(/\n+$/, "");
+
+async function runCode() {
+  if (!current) return;
+  busy(true); clearOut(); setStatus("실행 중…");
+  const r = await execute(current.lang, codeEl.value, $("stdin").value, true);
+  busy(false); setStatus("");
+  clearOut();
+  if (r.out) printOut(r.out);
+  if (r.timeout) { printOut("\n⏱ 시간 초과! 무한 반복이 없는지 확인하세요.\n", "e"); return; }
+  if (!r.ok) {
+    const info = current.lang === "c" ? explainC(r.error) : explainPython(r.error);
+    printOut("\n" + info.raw + "\n", "e"); showFriendly(info);
+  } else {
+    printSys((r.out ? "\n" : "") + "[실행 끝]");
+  }
+}
+
+async function grade() {
+  if (!current || !current.tests.length) return null;
+  busy(true); setStatus("채점 중…"); clearOut();
+  const box = $("tests"); box.innerHTML = "";
+  const results = [];
+  for (let i = 0; i < current.tests.length; i++) {
+    setStatus(`채점 중… (${i + 1}/${current.tests.length})`);
+    const t = current.tests[i];
+    const r = await execute(current.lang, codeEl.value, t.in, false);
+    const pass = r.ok && norm(r.out) === norm(t.out);
+    results.push({ ...t, got: r.out, pass, error: r.timeout ? "시간 초과" : r.error });
+    if (!r.ok && i === 0) { const info = current.lang === "c" ? explainC(r.error) : explainPython(r.error); showFriendly(info); }
+  }
+  busy(false); setStatus("");
+  const passed = results.filter(r => r.pass).length;
+  lastGrade = { passed, total: results.length, results };
+  renderTests(lastGrade);
+  if (passed === results.length) {
+    const p = store.get("cp.passed", {}); p[current.lang + "." + current.no] = true; store.set("cp.passed", p);
+    renderList();
+    printSys("🎉 모든 테스트를 통과했어요! 📤 제출을 눌러 선생님께 보내세요.");
+  } else printSys(`${results.length}개 중 ${passed}개 통과. 아래에서 틀린 부분을 확인하세요.`);
+  return lastGrade;
+}
+function renderTests(g) {
+  const box = $("tests");
+  box.innerHTML = `<div class="score"><span>${g.passed === g.total ? "🎉" : "🧪"} ${g.passed} / ${g.total} 통과</span><div class="bar"><i style="width:${g.passed / g.total * 100}%"></i></div></div>`;
+  g.results.forEach((r, i) => {
+    const d = document.createElement("details");
+    d.className = "tc " + (r.pass ? "ok" : "no");
+    if (!r.pass && !box.querySelector("details[open]")) d.open = true;
+    d.innerHTML = `<summary>${r.pass ? "✅" : "❌"} 테스트 ${i + 1}${r.error ? " — 오류" : ""}</summary>
+      <div class="cmp"><div><span class="cap">입력</span><pre></pre></div><div><span class="cap">기대 출력</span><pre></pre></div><div><span class="cap">내 출력</span><pre></pre></div></div>`;
+    const pres = d.querySelectorAll("pre");
+    pres[0].textContent = r.in || "(없음)"; pres[1].textContent = r.out; pres[2].textContent = (r.got || "") + (r.error ? "\n⚠ " + r.error.split("\n").pop() : "");
+    box.appendChild(d);
+  });
+}
+
+async function submit() {
+  if (!current || current.free) return;
+  if (!me) { askLogin(submit); return; }
+  if (!connected) { toast("스프레드시트가 연결되지 않아 제출할 수 없어요. 선생님께 알려 주세요."); return; }
+  let report = "";
+  if (current.tests.length) {
+    const g = await grade();
+    report = g.results.map((r, i) => `[테스트 ${i + 1}] ${r.pass ? "✅ 통과" : "❌ 실패"}` +
+      (r.pass ? "" : `\n  입력: ${(r.in || "").replace(/\n/g, " ⏎ ")}\n  기대: ${norm(r.out).replace(/\n/g, " ⏎ ")}\n  실제: ${norm(r.got).replace(/\n/g, " ⏎ ")}${r.error ? "\n  오류: " + r.error.split("\n").pop() : ""}`)).join("\n");
+  } else {
+    const r = await execute(current.lang, codeEl.value, $("stdin").value, false);
+    report = (r.out || "") + (r.ok ? "" : "\n[오류] " + (r.error || "").split("\n").pop());
+  }
+  const g = lastGrade;
+  if (!confirm(`${me.id} ${me.name}\n[${current.title}] ${g ? `(${g.passed}/${g.total} 통과)` : ""}\n제출할까요?`)) return;
+  busy(true); setStatus("제출 중…");
+  try {
+    const res = await fetch(GOOGLE_SCRIPT_URL, {
+      method: "POST",   // Content-Type 을 지정하지 않으면 text/plain 으로 가서 CORS 사전요청이 생기지 않는다
+      body: JSON.stringify({ action: "submit", studentId: me.id, studentName: me.name, no: current.no, title: current.title,
+        lang: current.lang, passed: g ? g.passed : "", total: g ? g.total : "", output: report, code: codeEl.value }),
+    });
+    const j = await res.json();
+    if (!j.ok) throw new Error(j.error);
+    toast(`📤 제출 완료! (${j.attempt}번째 제출)`);
+    printSys(`📤 제출 완료 — ${j.attempt}번째 제출이에요.`);
+  } catch (e) {
+    toast("제출 실패: 인터넷 연결을 확인하고 다시 눌러 주세요.");
+    printOut("\n제출 실패: " + e.message + "\n", "e");
+  } finally { busy(false); setStatus(""); }
+}
+
+/* ══════════ 학번·이름 ══════════ */
+function renderMe() { $("meBtn").textContent = me ? `👤 ${me.id} ${me.name}` : "👤 로그인"; }
+function askLogin(after) {
+  openModal(`<h2>👋 학번과 이름을 입력하세요</h2>
+    <input class="field" id="mId" inputmode="numeric" placeholder="학번 (예: 20601)" value="${me ? esc(me.id) : ""}">
+    <input class="field" id="mName" placeholder="이름 (예: 홍길동)" value="${me ? esc(me.name) : ""}">
+    <div class="row"><button class="btn ghost" id="mCancel">나중에</button><button class="btn" id="mOk">확인</button></div>`);
+  $("mCancel").onclick = closeModal;
+  $("mOk").onclick = () => {
+    const id = $("mId").value.trim(), name = $("mName").value.trim();
+    if (!id || !name) { toast("학번과 이름을 모두 입력하세요."); return; }
+    me = { id, name }; store.set("cp.me", me); renderMe(); closeModal();
+    if (after) after();
+  };
+  setTimeout(() => $("mId").focus(), 50);
+}
+const esc = (s) => String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+function openModal(html, wide) { $("modalBox").innerHTML = html; $("modal").classList.toggle("wide", !!wide); $("modal").classList.remove("hidden"); }
+function closeModal() { $("modal").classList.add("hidden"); }
+$("modal").addEventListener("click", (e) => { if (e.target.id === "modal") closeModal(); });
+
+/* ══════════ 스프레드시트에서 문제 불러오기 ══════════ */
+async function api(params) {
+  const url = GOOGLE_SCRIPT_URL + "?" + new URLSearchParams(params);
+  const res = await fetch(url);
+  const j = await res.json();
+  if (!j.ok) throw new Error(j.error || "서버 오류");
+  return j;
+}
+function applyData(d) {
+  const title = (d.settings && d.settings.title) || DEFAULT_TITLE;
+  document.title = title; $("siteTitle").textContent = title;
+  const notice = d.settings && d.settings.notice;
+  $("noticeBox").textContent = notice ? "📢 " + notice : ""; $("noticeBox").classList.toggle("hidden", !notice);
+  LESSONS = d.lessons;
+}
+async function loadLessons() {
+  const cached = store.get("cp.cache", null);
+  if (cached) applyData(cached);            // 먼저 지난번 문제로 빠르게 보여 주고
+  else applyData({ settings: {}, lessons: SAMPLE_LESSONS });
+  setLang(lang);
+  if (!GOOGLE_SCRIPT_URL) return;
+  try {
+    const d = await api({ action: "lessons" });   // 최신 문제로 바꾼다
+    connected = true;
+    store.set("cp.cache", d);
+    const curKey = current && current.lang + "." + current.no;
+    applyData(d);
+    const stillCurrent = LESSONS.find(l => l.lang + "." + l.no === curKey);
+    current = stillCurrent || null;
+    renderList();
+    if (stillCurrent && JSON.stringify(stillCurrent) !== JSON.stringify(cached && cached.lessons.find(l => l.lang + "." + l.no === curKey))) openLesson(stillCurrent);
+  } catch (e) {
+    console.warn(e);
+    if (!cached) { $("noticeBox").textContent = "⚠ 스프레드시트에 연결하지 못해 예시 문제를 보여 주고 있어요. (제출 불가)"; $("noticeBox").classList.remove("hidden"); }
+  }
+}
+
+/* ══════════ 교사 현황판 ══════════ */
+let dashTimer = null;
+async function showTeacher() {
+  $("studentView").classList.add("hidden"); $("teacherView").classList.remove("hidden");
+  document.querySelector("header .lang-toggle").classList.add("hidden");
+  let key = sessionStorage.getItem("cp.key");
+  if (!key) {
+    openModal(`<h2>🔒 교사 비밀번호</h2><input class="field" type="password" id="tKey" placeholder="스프레드시트 '설정' 탭의 교사비밀번호">
+      <div class="row"><a class="btn ghost" href="#" style="text-decoration:none">취소</a><button class="btn" id="tOk">확인</button></div>`);
+    $("tOk").onclick = () => { sessionStorage.setItem("cp.key", $("tKey").value); closeModal(); loadDash(); };
+    $("tKey").onkeydown = (e) => { if (e.key === "Enter") $("tOk").click(); };
+    setTimeout(() => $("tKey").focus(), 50);
+  } else loadDash();
+  clearInterval(dashTimer); dashTimer = setInterval(loadDash, 30000);
+}
+async function loadDash() {
+  const key = sessionStorage.getItem("cp.key"); if (!key) return;
+  $("dashStatus").textContent = "불러오는 중…";
+  try {
+    const d = await api({ action: "dashboard", key });
+    renderDash(d);
+    $("dashStatus").textContent = "갱신 " + new Date().toLocaleTimeString("ko-KR");
+  } catch (e) {
+    $("dashStatus").textContent = "";
+    if (/비밀번호/.test(e.message)) { sessionStorage.removeItem("cp.key"); toast("비밀번호가 틀렸어요."); showTeacher(); }
+    else toast("불러오기 실패: " + e.message);
+  }
+}
+function renderDash(d) {
+  const probs = d.problems;  // [{no, title, lang}]
+  const rows = d.students;   // [{id, name, cells: {no: {text, state}}}]
+  if (!rows.length) { $("dash").innerHTML = '<p style="padding:16px">아직 제출이 없어요.</p>'; return; }
+  let h = '<table class="dash"><thead><tr><th>학번</th><th>이름</th>';
+  probs.forEach(p => h += `<th title="${esc(p.title)}">${esc(p.no)}<br><small>${esc(p.title.slice(0, 10))}</small></th>`);
+  h += "</tr><tr><th colspan=2>통과 인원</th>";
+  probs.forEach(p => h += `<th>${rows.filter(r => r.cells[p.no] && r.cells[p.no].state === "ok").length}/${rows.filter(r => r.cells[p.no]).length}</th>`);
+  h += "</tr></thead><tbody>";
+  rows.forEach(r => {
+    h += `<tr><td>${esc(r.id)}</td><td>${esc(r.name)}</td>`;
+    probs.forEach(p => { const c = r.cells[p.no]; h += c ? `<td class="${c.state}" data-id="${esc(r.id)}" data-no="${esc(p.no)}">${esc(c.text)}</td>` : "<td></td>"; });
+    h += "</tr>";
+  });
+  $("dash").innerHTML = h + "</tbody></table>";
+  $("dash").querySelectorAll("td[data-no]").forEach(td => td.onclick = () => showDetail(td.dataset.id, td.dataset.no));
+}
+async function showDetail(id, no) {
+  openModal("<p>불러오는 중…</p>", true);
+  try {
+    const d = await api({ action: "detail", key: sessionStorage.getItem("cp.key"), id, no });
+    let h = `<h2>${esc(id)} ${esc(d.name || "")} · ${esc(no)}번 제출 기록 (최근 ${d.items.length}개)</h2>`;
+    d.items.forEach(s => h += `<div class="sub-item"><b>${esc(s.time)}</b> · ${esc(s.result)}<div class="cap" style="margin-top:8px">실행 결과</div><pre>${esc(s.output)}</pre><div class="cap">코드</div><pre>${esc(s.code)}</pre></div>`);
+    h += '<div class="row"><button class="btn" onclick="closeModal()">닫기</button></div>';
+    $("modalBox").innerHTML = h;
+  } catch (e) { $("modalBox").innerHTML = `<p>불러오기 실패: ${esc(e.message)}</p><div class="row"><button class="btn" onclick="closeModal()">닫기</button></div>`; }
+}
+function route() {
+  if (location.hash === "#teacher") showTeacher();
+  else {
+    clearInterval(dashTimer);
+    $("teacherView").classList.add("hidden"); $("studentView").classList.remove("hidden");
+    document.querySelector("header .lang-toggle").classList.remove("hidden");
+    closeModal();
+  }
+}
+
+/* ══════════ 시작 ══════════ */
+$("runBtn").onclick = runCode;
+$("gradeBtn").onclick = grade;
+$("submitBtn").onclick = submit;
+$("hintBtn").onclick = () => $("hintBox").classList.toggle("hidden");
+$("resetBtn").onclick = () => { if (confirm("처음 코드로 되돌릴까요? 지금 코드는 사라져요.")) { codeEl.value = current.code || ""; codeEl.dispatchEvent(new Event("input")); } };
+$("exampleBtn").onclick = () => { $("stdin").value = current.tests[0].in; toast("예시 입력을 넣었어요."); };
+$("meBtn").onclick = () => askLogin();
+$("menuBtn").onclick = () => $("side").classList.toggle("open");
+$("dashRefresh").onclick = loadDash;
+document.querySelectorAll("#langToggle button").forEach(b => b.onclick = () => setLang(b.dataset.lang));
+window.addEventListener("hashchange", route);
+
+renderMe();
+loadLessons().then(() => { if (!me && location.hash !== "#teacher") askLogin(); });
+route();
+startEngine(lang);
+</script>
+</body>
+</html>
