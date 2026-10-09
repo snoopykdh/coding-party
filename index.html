@@ -52,6 +52,7 @@
   /* ── 에디터 ── */
   .work { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); gap: 14px; }
   .label { font-size: 13px; font-weight: 700; color: var(--muted); margin: 0 0 6px; display: flex; justify-content: space-between; align-items: center; }
+  .blank-tip { margin: 0 0 6px; padding: 6px 10px; background: #fff8e6; border-radius: 8px; font-size: 13px; line-height: 1.5; }
   .editor { display: flex; background: var(--code-bg); border-radius: var(--radius); overflow: hidden; height: 360px; }
   .gutter { padding: 12px 6px 12px 10px; color: var(--gutter); text-align: right; user-select: none; overflow: hidden;
             font: 15px/1.55 Consolas, "D2Coding", Menlo, monospace; min-width: 38px; }
@@ -168,6 +169,7 @@
     <div class="work">
       <div>
         <p class="label"><span id="editorLabel">💻 코드</span><span style="font-weight:400">Shift+Enter 실행</span></p>
+        <p class="blank-tip hidden" id="blankTip">✏️ <b>____</b> 빈칸을 누르면 통째로 선택돼요. 그대로 입력하면 빈칸이 바뀌어요. <b>Tab</b> 키 = 다음 빈칸</p>
         <div class="editor"><div class="gutter" id="gutter"></div>
           <textarea id="code" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off"></textarea></div>
       </div>
@@ -449,9 +451,32 @@ function renderGutter() {
 function markErrLine(n) { errLine = n; renderGutter(); }
 codeEl.addEventListener("scroll", () => gutter.scrollTop = codeEl.scrollTop);
 codeEl.addEventListener("input", () => { renderGutter(); if (current) store.set(draftKey(), codeEl.value); });
+/* 빈칸(____, 밑줄 3개 이상) 다루기: 누르면 빈칸 전체 선택 → 입력하면 통째로 바뀜. Tab 은 다음 빈칸으로 */
+const BLANK = /_{3,}/g;
+function blankAt(pos) {
+  BLANK.lastIndex = 0; let m;
+  while ((m = BLANK.exec(codeEl.value))) { if (pos >= m.index && pos <= m.index + m[0].length) return [m.index, m.index + m[0].length]; }
+  return null;
+}
+function selectBlankAtCaret() {
+  if (codeEl.selectionStart !== codeEl.selectionEnd) return;
+  const b = blankAt(codeEl.selectionStart);
+  if (b) codeEl.setSelectionRange(b[0], b[1]);
+}
+function selectNextBlank() {
+  BLANK.lastIndex = codeEl.selectionEnd; let m = BLANK.exec(codeEl.value);
+  if (!m) { BLANK.lastIndex = 0; m = BLANK.exec(codeEl.value); }   // 끝까지 가면 처음 빈칸으로
+  if (!m) return false;
+  codeEl.setSelectionRange(m.index, m.index + m[0].length); return true;
+}
+function updateBlankTip() { $("blankTip").classList.toggle("hidden", !/_{3,}/.test(codeEl.value)); }
+codeEl.addEventListener("click", selectBlankAtCaret);
+codeEl.addEventListener("input", updateBlankTip);
 codeEl.addEventListener("keydown", (e) => {
   if (e.key === "Tab") {
-    e.preventDefault(); insertText("    ");
+    e.preventDefault();
+    if (!e.shiftKey && /_{3,}/.test(codeEl.value) && selectNextBlank()) return;
+    insertText("    ");
   } else if (e.key === "Enter" && !e.shiftKey && !e.ctrlKey && !e.isComposing) {
     const before = codeEl.value.slice(0, codeEl.selectionStart);
     const line = before.slice(before.lastIndexOf("\n") + 1);
@@ -500,6 +525,7 @@ function openLesson(l) {
   $("submitBtn").classList.toggle("hidden", !!l.free);
   $("editorLabel").textContent = l.lang === "c" ? "💻 C 코드" : "💻 파이썬 코드";
   codeEl.value = store.get(draftKey(), l.code || "");
+  updateBlankTip();
   $("stdin").value = l.tests[0] ? l.tests[0].in : "";
   $("tests").innerHTML = ""; clearOut();
   if (!engines[l.lang].ready) { printSys(l.lang === "c" ? "C 엔진 준비 중…" : "파이썬 엔진 준비 중… (처음 한 번은 10초쯤 걸려요)"); engineReady(l.lang).then(() => { if (current === l) { clearOut(); printSys("✅ 준비 완료! ▶ 실행을 눌러 보세요."); } }); }
