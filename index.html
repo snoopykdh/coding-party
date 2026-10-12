@@ -47,6 +47,18 @@
   .p-desc { white-space: pre-wrap; line-height: 1.65; }
   .p-tools { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
   .chip { background: #eef1f7; color: var(--text); padding: 6px 12px; font-size: 13px; }
+  .p-nav { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+  .p-nav button { background: #eef1f7; color: var(--text); padding: 8px 14px; font-weight: 700; font-size: 14px; white-space: nowrap; }
+  .p-nav button:hover:not(:disabled) { background: #e8eeff; color: var(--main-d); }
+  .p-nav button:disabled { opacity: .35; cursor: default; }
+  .p-nav .pos { flex: 1; text-align: center; font-size: 13px; color: var(--muted); font-weight: 700; }
+  .p-nav.bottom { margin: 18px 0 8px; }
+  .p-nav.bottom button { padding: 12px 18px; font-size: 15px; }
+  .p-nav.bottom button.next { background: var(--main); color: #fff; }
+  .p-nav.bottom button.next:hover:not(:disabled) { background: var(--main-d); color: #fff; }
+  .slide-in-l { animation: slideL .22s ease-out; } .slide-in-r { animation: slideR .22s ease-out; }
+  @keyframes slideL { from { opacity: .3; transform: translateX(40px); } to { opacity: 1; transform: none; } }
+  @keyframes slideR { from { opacity: .3; transform: translateX(-40px); } to { opacity: 1; transform: none; } }
   .hint { margin-top: 10px; padding: 10px 12px; background: #fff8e6; border-radius: 8px; white-space: pre-wrap; line-height: 1.6; }
 
   /* ── 에디터 ── */
@@ -155,7 +167,12 @@
   </aside>
 
   <main>
-    <section class="card">
+    <section class="card" id="pCard">
+      <div class="p-nav">
+        <button class="prev" data-dir="-1" aria-label="이전 문제">◀ 이전</button>
+        <span class="pos" id="pPos"></span>
+        <button class="next" data-dir="1" aria-label="다음 문제">다음 ▶</button>
+      </div>
       <h2 class="p-title" id="pTitle">불러오는 중…</h2>
       <div class="p-desc" id="pDesc"></div>
       <div class="p-tools">
@@ -189,6 +206,11 @@
     </div>
     <div id="friendly" class="friendly hidden"></div>
     <div id="tests" class="tests"></div>
+    <div class="p-nav bottom">
+      <button class="prev" data-dir="-1" aria-label="이전 문제">◀ 이전 문제</button>
+      <span class="pos"></span>
+      <button class="next" data-dir="1" aria-label="다음 문제">다음 문제 ▶</button>
+    </div>
   </main>
 </div>
 
@@ -498,12 +520,15 @@ const hashStr = (s) => { let h = 0; for (let i = 0; i < s.length; i++) h = (h * 
 const draftKey = () => `cp.draft.${current.lang}.${current.no}.${hashStr(current.code || "")}`;
 
 /* ══════════ 문제 목록 ══════════ */
+const freeLesson = (lang) => ({ no: "FREE-" + lang, lang, title: "✏️ 자유 연습장", desc: "무엇이든 자유롭게 코딩해 보세요. (채점·제출 없음)", code: lang === "c" ? '#include <stdio.h>\n\nint main() {\n    \n    return 0;\n}' : "", hint: "", tests: [], free: true });
+// 목록에 보이는 순서 그대로 (자유 연습장 → 문제 1, 2, …). 이전/다음 이동도 이 순서를 따른다
+const lessonSeq = () => [freeLesson(lang), ...LESSONS.filter(l => l.lang === lang)];
 function renderList() {
   const items = LESSONS.filter(l => l.lang === lang);
   const passed = store.get("cp.passed", {});
   $("listHead").textContent = `${lang === "c" ? "C언어" : "파이썬"} 문제 ${items.length}개`;
   const list = $("list"); list.innerHTML = "";
-  const free = { no: "FREE-" + lang, lang, title: "✏️ 자유 연습장", desc: "무엇이든 자유롭게 코딩해 보세요. (채점·제출 없음)", code: lang === "c" ? '#include <stdio.h>\n\nint main() {\n    \n    return 0;\n}' : "", hint: "", tests: [], free: true };
+  const free = freeLesson(lang);
   [free, ...items].forEach(l => {
     const d = document.createElement("div");
     d.className = "item" + (current && current.no === l.no && current.lang === l.lang ? " on" : "");
@@ -533,8 +558,49 @@ function openLesson(l) {
   renderGutter();
   document.querySelectorAll(".item").forEach(el => el.classList.toggle("on", el.firstChild.textContent === l.title));
   store.set("cp.last." + l.lang, l.no);
+  updateNav();
   window.scrollTo({ top: 0 });
 }
+
+/* ══════════ 이전 · 다음 문제 (버튼 · 스와이프 · ←/→ 키) ══════════ */
+function curIndex(seq) { return current ? seq.findIndex(x => x.lang === current.lang && x.no === current.no) : -1; }
+function updateNav() {
+  const seq = lessonSeq(), i = curIndex(seq), n = seq.length - 1;
+  const pos = !current ? "" : current.free ? `자유 연습장 · 문제 ${n}개` : `문제 ${i} / ${n}`;
+  document.querySelectorAll(".p-nav .pos").forEach(el => el.textContent = pos);
+  document.querySelectorAll(".p-nav .prev").forEach(b => b.disabled = i <= 0);
+  document.querySelectorAll(".p-nav .next").forEach(b => b.disabled = i < 0 || i >= seq.length - 1);
+}
+function goLesson(dir) {
+  const seq = lessonSeq(), target = seq[curIndex(seq) + dir];
+  if (!target) { toast(dir > 0 ? "마지막 문제예요 🎉" : "첫 화면이에요"); return; }
+  openLesson(target);
+  const card = $("pCard"), cls = dir > 0 ? "slide-in-l" : "slide-in-r";
+  card.classList.remove("slide-in-l", "slide-in-r"); void card.offsetWidth; card.classList.add(cls);
+}
+document.querySelectorAll(".p-nav button").forEach(b => b.onclick = () => goLesson(+b.dataset.dir));
+document.addEventListener("keydown", (e) => {
+  if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
+  if (e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return;
+  if ($("studentView").classList.contains("hidden") || !$("modal").classList.contains("hidden")) return;
+  if (e.target.closest && e.target.closest("textarea, input, select, [contenteditable]")) return;   // 코드 칸에서는 커서 이동으로 써야 한다
+  e.preventDefault(); goLesson(e.key === "ArrowRight" ? 1 : -1);
+});
+// 좌우로 밀기: 코드 편집기·실행 결과처럼 가로 스크롤이 있는 곳에서 시작한 손짓은 무시
+let swipe = null;
+$("studentView").addEventListener("touchstart", (e) => {
+  const t = e.touches[0];
+  swipe = (e.touches.length === 1 && t.clientX > 24 && t.clientX < innerWidth - 24 &&
+           !e.target.closest("textarea, input, select, .editor, .out, .tc, aside, button")) ? { x: t.clientX, y: t.clientY, at: Date.now() } : null;
+}, { passive: true });
+$("studentView").addEventListener("touchend", (e) => {
+  if (!swipe) return;
+  const t = e.changedTouches[0], dx = t.clientX - swipe.x, dy = t.clientY - swipe.y, dt = Date.now() - swipe.at;
+  swipe = null;
+  if ($("side").classList.contains("open") || dt > 700 || Math.abs(dx) < 70 || Math.abs(dx) < Math.abs(dy) * 1.8) return;
+  if (getSelection && String(getSelection()).length) return;   // 글자를 드래그로 고르는 중
+  goLesson(dx < 0 ? 1 : -1);
+}, { passive: true });
 function setLang(l) {
   lang = l; store.set("cp.lang", l);
   document.querySelectorAll("#langToggle button").forEach(b => b.classList.toggle("on", b.dataset.lang === l));
